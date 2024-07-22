@@ -8,10 +8,7 @@ import { airdrop } from "../utils/utils";
 import { ethers, getBytes, hashMessage, keccak256, toUtf8Bytes } from "ethers";
 import { Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
-import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import { getKeypairFromEnvironment } from "@solana-developers/helpers";
 require("dotenv").config();
-import { createHash } from "crypto";
 import idl from "../target/idl/bond.json";
 
 describe("bond", () => {
@@ -85,7 +82,12 @@ describe("bond", () => {
     const rawTx = await frontendSignTx(user, sharedMsg);
 
     // ------------------------------backend------------------------------
-    const [valid, userAddress] = await backendVerify(rawTx, sharedMsg);
+    const program = new Program(idl as Idl);
+    const [valid, userAddress] = await backendVerify(
+      rawTx,
+      sharedMsg,
+      program.programId.toBase58()
+    );
 
     expect(valid).to.equal(true);
     expect(userAddress).to.equal(user.publicKey.toBase58());
@@ -168,11 +170,7 @@ async function frontendSignTx(user: anchor.web3.Keypair, sharedMsg: string): Pro
   const program = new Program(idl as Idl);
 
   // Add an instruction to the transaction
-  transaction.add(
-    await program.methods
-      .verifyCallWithParam2([...msg])
-      .instruction()
-  );
+  transaction.add(await program.methods.verifyCallWithParam2([...msg]).instruction());
 
   let blockhash = (await provider.connection.getLatestBlockhash("finalized")).blockhash;
 
@@ -187,19 +185,27 @@ async function frontendSignTx(user: anchor.web3.Keypair, sharedMsg: string): Pro
   return rawTx;
 }
 
-async function backendVerify(rawTx: Buffer, sharedMsg: string): Promise<[boolean, string]> {
+async function backendVerify(
+  rawTx: Buffer,
+  sharedMsg: string,
+  programId: string
+): Promise<[boolean, string]> {
   const signedTxBackend = Transaction.from(Uint8Array.from(rawTx));
 
   // check only one instruction
   if (signedTxBackend.instructions.length != 1) {
+  }
+
+  // check program is correct
+  if (signedTxBackend.instructions[0].programId.toString() != programId) {
     return [false, ""];
   }
 
-  // check param is correct
   if (
     signedTxBackend.instructions[0].data.toString("hex").slice(16) !=
     keccak256(toUtf8Bytes(sharedMsg)).slice(2)
   ) {
+    // check param is correct
     return [false, ""];
   }
 
