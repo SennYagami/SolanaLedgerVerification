@@ -194,6 +194,7 @@ async function backendVerify(
 
   // check only one instruction
   if (signedTxBackend.instructions.length != 1) {
+    return [false, ""];
   }
 
   // check program is correct
