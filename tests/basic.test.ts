@@ -6,7 +6,7 @@ import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pub
 import * as crypto from "crypto";
 import { airdrop } from "../utils/utils";
 import { ethers, getBytes, hashMessage, keccak256, toUtf8Bytes } from "ethers";
-import { Transaction } from "@solana/web3.js";
+import { PublicKey, Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
 require("dotenv").config();
 import idl from "../target/idl/bond.json";
@@ -207,6 +207,14 @@ async function backendVerify(
     keccak256(toUtf8Bytes(sharedMsg)).slice(2)
   ) {
     // check param is correct
+    return [false, ""];
+  }
+
+  if (
+    signedTxBackend.signatures.length != 1 ||
+    !signedTxBackend.signatures[0].publicKey ||
+    !signedTxBackend.signatures[0].signature
+  ) {
     return [false, ""];
   }
 
