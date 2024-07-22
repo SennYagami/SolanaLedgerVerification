@@ -101,14 +101,14 @@ describe("bond", () => {
     const user_evm = ethers.Wallet.createRandom();
 
     // sign message
-    const message = "Sign to bond";
+    const message = "Bonk x Manta: Sign to bond";
     const signature = await user_evm.signMessage(message);
     const messageHash = hashMessage(message);
 
     const messageHashBytes = ethers.getBytes(messageHash); // length 32
     const signatureBytes = ethers.getBytes(signature); // length 65
 
-    // // get pda address
+    // get pda address
     const pda = findProgramAddressSync(
       [Buffer.from("bond"), user.publicKey.toBuffer()],
       program.programId

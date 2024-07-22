@@ -1,10 +1,8 @@
 import idl from "../../target/idl/bond.json";
 import { Program, Idl, AnchorProvider, setProvider, Wallet } from "@coral-xyz/anchor";
-import { getAddr, getConnection, sendTxn } from "../utils/utils";
+import { getConnection, sendTxn } from "../utils/utils";
 
 import { getKeypairFromEnvironment } from "@solana-developers/helpers";
-import { PublicKey } from "@solana/web3.js";
-import { Bond } from "../../target/types/bond";
 
 require("dotenv").config();
 
