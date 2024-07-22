@@ -5,13 +5,13 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-ledger_verify_sig = "C8pS3cWRTTG9H6TDNupZEaXwedF1qvUPx93BsBT4kMBo"
+ledger_verify_sig = "J3VFbbhE9YBwELdnHS7Shg7QkjtZDoxaBpKFCcr6EDax"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
