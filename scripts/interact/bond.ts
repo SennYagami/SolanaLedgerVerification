@@ -5,7 +5,6 @@ import { getKeypairFromEnvironment } from "@solana-developers/helpers";
 import { ethers, hashMessage } from "ethers";
 import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
 require("dotenv").config();
-
 async function main() {
   const connection = getConnection();
 

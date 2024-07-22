@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Program } from "@coral-xyz/anchor";
+import { Program, Idl } from "@coral-xyz/anchor";
 import { Bond } from "../target/types/bond";
 import { expect } from "chai";
 import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
@@ -8,6 +8,11 @@ import { airdrop } from "../utils/utils";
 import { ethers, getBytes, hashMessage, keccak256, toUtf8Bytes } from "ethers";
 import { Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
+import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { getKeypairFromEnvironment } from "@solana-developers/helpers";
+require("dotenv").config();
+import { createHash } from "crypto";
+import idl from "../target/idl/bond.json";
 
 describe("bond", () => {
   // Configure the client to use the local cluster.
@@ -74,41 +79,16 @@ describe("bond", () => {
   });
 
   it("verify_call_with_param recover signer", async () => {
-    // recover the signer
-    // Create a transaction
-    const transaction = new Transaction();
+    const sharedMsg = "Bonk x Manta: Sign to bond.";
 
-    const msg = getBytes(keccak256(toUtf8Bytes("Bonk x Manta: Sign to bond.")));
+    // ------------------------------frontend------------------------------
+    const rawTx = await frontendSignTx(user, sharedMsg);
 
-    // Add an instruction to the transaction
-    transaction.add(
-      await program.methods
-        .verifyCallWithParam([...msg])
-        .accounts({ signer: user.publicKey })
-        .instruction()
-    );
+    // ------------------------------backend------------------------------
+    const [valid, userAddress] = await backendVerify(rawTx, sharedMsg);
 
-    let blockhash = (await provider.connection.getLatestBlockhash("finalized")).blockhash;
-    transaction.recentBlockhash = blockhash;
-
-    transaction.signatures = [user].map((signer) => ({
-      signature: null,
-      publicKey: signer.publicKey,
-    }));
-    const rawTx = transaction.compileMessage().serialize();
-
-    // Sign the transaction with the keypair
-    transaction.sign(user);
-
-    // get signature
-    const index = transaction.signatures.findIndex((sigpair) =>
-      user.publicKey.equals(sigpair.publicKey)
-    );
-    const signature = transaction.signatures[index].signature;
-
-    // ed25519 recover
-    const isValid = nacl.sign.detached.verify(rawTx, signature, user.publicKey.toBuffer());
-    expect(isValid).to.equal(true);
+    expect(valid).to.equal(true);
+    expect(userAddress).to.equal(user.publicKey.toBase58());
   });
 
   it("initialize_verification", async () => {
@@ -171,3 +151,63 @@ describe("bond", () => {
     expect(recovered).to.equal(user_evm.address);
   });
 });
+
+function uint8ArrayToHex(uint8Array: Uint8Array): string {
+  return Array.from(uint8Array)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function frontendSignTx(user: anchor.web3.Keypair, sharedMsg: string): Promise<Buffer> {
+  const provider = anchor.AnchorProvider.env();
+
+  const msg = getBytes(keccak256(toUtf8Bytes(sharedMsg)));
+
+  const transaction = new Transaction();
+
+  const program = new Program(idl as Idl);
+
+  // Add an instruction to the transaction
+  transaction.add(
+    await program.methods
+      .verifyCallWithParam2([...msg])
+      .instruction()
+  );
+
+  let blockhash = (await provider.connection.getLatestBlockhash("finalized")).blockhash;
+
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = user.publicKey;
+
+  const signedTxFrontend = await new anchor.Wallet(user).signTransaction(transaction);
+
+  // serialize
+  const rawTx = signedTxFrontend.serialize();
+
+  return rawTx;
+}
+
+async function backendVerify(rawTx: Buffer, sharedMsg: string): Promise<[boolean, string]> {
+  const signedTxBackend = Transaction.from(Uint8Array.from(rawTx));
+
+  // check only one instruction
+  if (signedTxBackend.instructions.length != 1) {
+    return [false, ""];
+  }
+
+  // check param is correct
+  if (
+    signedTxBackend.instructions[0].data.toString("hex").slice(16) !=
+    keccak256(toUtf8Bytes(sharedMsg)).slice(2)
+  ) {
+    return [false, ""];
+  }
+
+  // verify all signatures
+  const valid = signedTxBackend.verifySignatures();
+
+  // get user address who signed the transaction
+  const userAddress = signedTxBackend.signatures[0].publicKey.toBase58();
+
+  return [valid, userAddress];
+}

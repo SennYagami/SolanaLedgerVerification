@@ -10,7 +10,17 @@ pub mod bond {
         Ok(())
     }
 
-    pub fn verify_call_with_param(_ctx: Context<VerifyCallCtx>, _msg: [u8; 32]) -> Result<()> {
+    pub fn verify_call_with_param(
+        _ctx: Context<VerifyCallWithParamCtx>,
+        _msg: [u8; 32],
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn verify_call_with_param_2(
+        _ctx: Context<VerifyCallWithParam2Ctx>,
+        _msg: [u8; 32],
+    ) -> Result<()> {
         Ok(())
     }
 
@@ -34,6 +44,14 @@ pub mod bond {
 pub struct VerifyCallCtx<'info> {
     pub signer: Signer<'info>,
 }
+
+#[derive(Accounts)]
+pub struct VerifyCallWithParamCtx<'info> {
+    pub signer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct VerifyCallWithParam2Ctx {}
 
 #[derive(Accounts)]
 #[instruction(_seed: [u8;32])]

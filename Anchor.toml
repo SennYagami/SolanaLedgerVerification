@@ -11,7 +11,7 @@ ledger_verify_sig = "C8pS3cWRTTG9H6TDNupZEaXwedF1qvUPx93BsBT4kMBo"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
