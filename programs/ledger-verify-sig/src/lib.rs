@@ -1,12 +1,16 @@
 use anchor_lang::prelude::*;
 
-declare_id!("7AcjcnULkoipLpqzZGkCmTqM4YTNCKeLSPx6vjXBhBRK");
+declare_id!("C8pS3cWRTTG9H6TDNupZEaXwedF1qvUPx93BsBT4kMBo");
 
 #[program]
 pub mod bond {
     use super::*;
 
     pub fn verify_call(_ctx: Context<VerifyCallCtx>) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn verify_call_with_param(_ctx: Context<VerifyCallCtx>, _msg: [u8; 32]) -> Result<()> {
         Ok(())
     }
 

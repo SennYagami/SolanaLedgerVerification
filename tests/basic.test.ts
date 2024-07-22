@@ -5,7 +5,7 @@ import { expect } from "chai";
 import { findProgramAddressSync } from "@project-serum/anchor/dist/cjs/utils/pubkey";
 import * as crypto from "crypto";
 import { airdrop } from "../utils/utils";
-import { ethers, hashMessage } from "ethers";
+import { ethers, getBytes, hashMessage, keccak256, toUtf8Bytes } from "ethers";
 import { Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
 
@@ -39,6 +39,7 @@ describe("bond", () => {
     // should succeed if the account is signed
     await program.methods.verifyCall().accounts({ signer: user.publicKey }).signers([user]).rpc();
   });
+
   it("verify_call recover signer", async () => {
     // recover the signer
     // Create a transaction
@@ -47,6 +48,44 @@ describe("bond", () => {
     // Add an instruction to the transaction
     transaction.add(
       await program.methods.verifyCall().accounts({ signer: user.publicKey }).instruction()
+    );
+
+    let blockhash = (await provider.connection.getLatestBlockhash("finalized")).blockhash;
+    transaction.recentBlockhash = blockhash;
+
+    transaction.signatures = [user].map((signer) => ({
+      signature: null,
+      publicKey: signer.publicKey,
+    }));
+    const rawTx = transaction.compileMessage().serialize();
+
+    // Sign the transaction with the keypair
+    transaction.sign(user);
+
+    // get signature
+    const index = transaction.signatures.findIndex((sigpair) =>
+      user.publicKey.equals(sigpair.publicKey)
+    );
+    const signature = transaction.signatures[index].signature;
+
+    // ed25519 recover
+    const isValid = nacl.sign.detached.verify(rawTx, signature, user.publicKey.toBuffer());
+    expect(isValid).to.equal(true);
+  });
+
+  it("verify_call_with_param recover signer", async () => {
+    // recover the signer
+    // Create a transaction
+    const transaction = new Transaction();
+
+    const msg = getBytes(keccak256(toUtf8Bytes("Bonk x Manta: Sign to bond.")));
+
+    // Add an instruction to the transaction
+    transaction.add(
+      await program.methods
+        .verifyCallWithParam([...msg])
+        .accounts({ signer: user.publicKey })
+        .instruction()
     );
 
     let blockhash = (await provider.connection.getLatestBlockhash("finalized")).blockhash;
